@@ -74,9 +74,16 @@ int lh_action_t::add_option(int argc, const char* argv[], int now) {
         return 1;
     }
     if (!strcmp(op, "-p") || !strcmp(op, "--print")) {
+        if (now + 1 >= argc)
+            lh_err("[-p|--print]: content not found");
+        int str_len = strlen(argv[now + 1]);
+        options.print_content = new char[str_len + 3];
+        memcpy(options.print_content, argv[now + 1], str_len);
+        options.print_content[str_len] = 0;
+
         puts("using print mode");
         options.mode = PRINT_MODE;
-        return 1;
+        return 2; // get one argument
     }
     if (!strcmp(op, "--tcp") || !strcmp(op, "--nudp")) {
         puts("using tcp protocol");
@@ -93,4 +100,9 @@ int lh_action_t::add_option(int argc, const char* argv[], int now) {
     sprintf(buf, "ignored option \'%s\'", op);
     lh_war(buf);
     return 1;
+}
+
+lh_action_t::~lh_action_t() {
+    if (options.print_content != NULL)
+        delete[] options.print_content;
 }

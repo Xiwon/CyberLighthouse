@@ -8,6 +8,20 @@
 #include "lh_action.h"
 #include "lh_error.h"
 
+void lh_read_len(const int sock, char* buf, const int buf_sz, const int len) {
+    for (int recv_len = 0, cnt; recv_len < len; ) {
+        // expecting len bytes data to buf
+        cnt = read(sock, &buf[recv_len], buf_sz - recv_len - 1);
+        if (cnt == -1)
+            lh_err("read() error");
+        if (cnt == 0)
+            lh_err("server disconnected");
+
+        recv_len += cnt;
+    }
+    buf[len] = 0;
+}
+
 void lh_start_echo_service(int clnt_sock) {
     static char buf[BUF_SIZE];
     static char str_len;
@@ -20,7 +34,18 @@ void lh_start_echo_service(int clnt_sock) {
 }
 
 void lh_start_print_service(int clnt_sock) {
-    
+    static char buf[BUF_SIZE];
+    static char str_len;
+
+    read(clnt_sock, &str_len, 1); // read expected length
+    lh_read_len(clnt_sock, buf, BUF_SIZE, str_len);
+
+    printf("#message from client> %s\n", buf);
+
+    sprintf(buf, "ok, received %d bytes\n", (int)str_len);
+    str_len = strlen(buf);
+    write(clnt_sock, &str_len, 1);
+    write(clnt_sock, buf, str_len);
 }
 
 std::mutex lh_tcp_mtx, lh_udp_mtx;
@@ -65,7 +90,7 @@ void lh_start_tcp_listener(lh_action_t& act) {
                 continue;
             }
 
-            read(clnt_sock, &link_type, 1);
+            read(clnt_sock, &link_type, 1); // get connection type
 
             static char reject[32];
             if (link_type == 'e') { // echo service
@@ -78,7 +103,20 @@ void lh_start_tcp_listener(lh_action_t& act) {
                     sprintf(reject, "echo service not supported\n");
                     char len = strlen(reject);
                     write(clnt_sock, &len, 1);
-                    write(clnt_sock, reject, strlen(reject));
+                    write(clnt_sock, reject, len);
+                }
+            }
+            if (link_type == 'p') { // print service
+                if (act.options.print_service) {
+                    puts("\nprint service started");
+                    std::thread thd(lh_start_print_service, clnt_sock);
+                    thd.join();
+                }
+                else {
+                    sprintf(reject, "print service not supported\n");
+                    char len = strlen(reject);
+                    write(clnt_sock, &len, 1);
+                    write(clnt_sock, reject, len);
                 }
             }
 

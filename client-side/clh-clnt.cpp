@@ -14,5 +14,7 @@ int main(int argc, const char* argv[]) {
     if (act.verb == CONNECT_VERB) {
         if (act.options.mode == ECHO_MODE)
             lh_connect_echo_client(act);
+        if (act.options.mode == PRINT_MODE)
+            lh_connect_print_client(act);
     }
 }

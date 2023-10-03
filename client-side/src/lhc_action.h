@@ -10,6 +10,7 @@ class lh_action_t{
     struct options_t{
         lh_mode_t mode;
         lh_protocol_t protocol;
+        char* print_content;
 
         options_t();
     }options;
@@ -19,6 +20,7 @@ class lh_action_t{
     unsigned int ip;
 
     lh_action_t(int argc, const char* argv[]);
+    ~lh_action_t();
 
   private:
     void connect_init(int argc, const char* argv[]);
