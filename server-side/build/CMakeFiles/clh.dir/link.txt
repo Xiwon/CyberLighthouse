@@ -1,0 +1,1 @@
+/usr/bin/c++ -rdynamic CMakeFiles/clh.dir/clh.o -o clh  bin/libserver_required.a 

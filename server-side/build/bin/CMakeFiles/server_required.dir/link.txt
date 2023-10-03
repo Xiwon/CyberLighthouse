@@ -1,0 +1,2 @@
+/usr/bin/ar qc libserver_required.a CMakeFiles/server_required.dir/lh_action.o CMakeFiles/server_required.dir/lh_error.o CMakeFiles/server_required.dir/lh_start.o
+/usr/bin/ranlib libserver_required.a

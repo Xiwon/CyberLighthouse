@@ -1,0 +1,2 @@
+/usr/bin/ar qc libclient_required.a CMakeFiles/client_required.dir/lhc_action.o CMakeFiles/client_required.dir/lhc_connect.o CMakeFiles/client_required.dir/lhc_error.o
+/usr/bin/ranlib libclient_required.a
