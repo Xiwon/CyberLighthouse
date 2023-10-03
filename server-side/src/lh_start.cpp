@@ -133,6 +133,36 @@ void lh_cmdline_prompt() {
     printf("#clh cmd> ");
 }
 
+std::vector<char*> lh_div_cmd(const char* cmd) {
+    std::vector<char*> argv = {NULL}; // place_holder
+    int argc = 1;
+
+    {
+        static char buf[BUF_SIZE];
+        int len = strlen(cmd);
+
+        for (int pos = 0; pos < len; ) {
+            if (isspace(cmd[pos])) {
+                pos++;
+                continue;
+            }
+
+            int buflen = 0;
+            while ((pos < len) && !isspace(cmd[pos])) {
+                buf[buflen] = cmd[pos];
+                buflen++, pos++;
+            }
+            buf[buflen] = 0;
+            argv.push_back(new char[buflen + 3]);
+            argc++;
+
+            memcpy(argv[argc - 1], buf, buflen + 1);
+        }
+    }
+
+    return argv;
+}
+
 void lh_start_cmdline(lh_action_t& act) {
     puts("command line running");
 
@@ -163,6 +193,22 @@ void lh_start_cmdline(lh_action_t& act) {
             return;
         }
 
-        
+        std::vector<char*> trans = lh_div_cmd(buf);
+        lh_action_t newact(trans.size(), (const char**)trans.data(), curact);
+
+        // printf("cmd info: \n");
+        // printf("argc = %d\n", (int)trans.size());
+        // for (const char* arg: trans) {
+        //     printf("argument: %s\n", arg);
+        // }
+        // printf("info end\n");
+
+        if (newact.verb == UNDEFINED_VERB) {
+            lh_war("ignored command");
+        }
+        if (newact.verb == CONFIG_VERB) {
+            curact.set_to(newact); // set
+            lh_cmdline_broadcast.notify_all(); // flash
+        }
     }
 }

@@ -1,7 +1,7 @@
 #ifndef _LH_ACTION_H
 #define _LH_ACTION_H
 
-enum lh_verb_t: int { UNDEFINED_VERB, START_VERB };
+enum lh_verb_t: int { UNDEFINED_VERB, START_VERB, CONFIG_VERB };
 
 class lh_action_t{
   public:
@@ -20,11 +20,13 @@ class lh_action_t{
 
     lh_action_t(); // all false constructor
     lh_action_t(int argc, const char* argv[]);
+    lh_action_t(int argc, const char* argv[], const lh_action_t& before);
 
     void set_to(const lh_action_t& to);
 
   private:
     void start_init(int argc, const char* argv[]);
+    void config_init(int argc, const char* argv[]);
 
     int add_option(int argc, const char* argv[], int now);
 };
