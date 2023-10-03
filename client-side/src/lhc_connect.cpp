@@ -12,10 +12,8 @@ void lh_connect_echo_client(lh_action_t& act) {
     printf("start echo-client at %s, port %d\n", 
         inet_ntoa((in_addr){act.ip}), act.port);
 
-    int sock;
+    int sock, str_len;
     static char buf[BUF_SIZE];
-    int str_len;
-
     sockaddr_in serv_adr;
 
     sock = socket(PF_INET, SOCK_STREAM, 0);
@@ -32,24 +30,37 @@ void lh_connect_echo_client(lh_action_t& act) {
     puts("connected..........");
     puts("Q/q to quit connection");
 
+    write(sock, "e", 1); // notify connection type
+
     while (1) {
         printf("#echo-client input> ");
         fgets(buf, BUF_SIZE, stdin);
 
         if (!strcmp(buf, "q\n") || !strcmp(buf, "Q\n"))
             break;
-            
+        
         str_len = write(sock, buf, strlen(buf));
-        for (int recv_len = 0, cnt; recv_len < str_len; ) {
-            // expecting a string of length `str_len`
+        char get_len;
+        read(sock, &get_len, 1);
+
+        for (int recv_len = 0, cnt; recv_len < get_len; ) {
+            // expecting a string of length `get_len`
             cnt = read(sock, &buf[recv_len], BUF_SIZE - recv_len - 1);
             if (cnt == -1)
                 lh_err("read() error");
+            if (cnt == 0) {
+                lh_err("server disconnected");
+            }
+
             recv_len += cnt;
         }
 
-        buf[str_len] = 0;
-        printf("#message from server$ %s", buf);
+        buf[get_len] = 0;
+        printf("#message from server> %s", buf);
+
+        if (str_len != get_len) // echo not supported
+            break;
     }
+
     close(sock);
 }

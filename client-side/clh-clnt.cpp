@@ -11,8 +11,8 @@
 int main(int argc, const char* argv[]) {
     lh_action_t act(argc, argv); // analyze command
 
-    if (act.verb == CONNECT) {
-        if (act.options.echo_mode)
+    if (act.verb == CONNECT_VERB) {
+        if (act.options.mode == ECHO_MODE)
             lh_connect_echo_client(act);
     }
 }

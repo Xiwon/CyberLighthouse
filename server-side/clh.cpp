@@ -9,12 +9,9 @@
 #include "src/lh_error.h"
 
 int main(int argc, const char* argv[]) {
-    lh_action_t act(argc, argv); // analyze command
+    lh_action_t act(argc, argv); // init command
 
-    if (act.verb == START_VERB) {
-        if (act.options.mode == ECHO_MODE)
-            lh_start_echo_server(act);
-        else if (act.options.mode == PRINT_MODE)
-            lh_start_print_server(act);
+    if (act.verb == START_VERB) { // start
+        lh_start_cmdline(act);
     }
 }

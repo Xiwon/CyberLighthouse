@@ -1,13 +1,15 @@
 #ifndef _LHC_ACTION_H
 #define _LHC_ACTION_H
 
-enum lh_verb_t: int { INVALID_VERB, CONNECT };
+enum lh_verb_t: int { UNDEFINED_VERB, CONNECT_VERB };
+enum lh_protocol_t: int { TCP_PROTOCOL, UDP_PROTOCOL };
+enum lh_mode_t: int { UNDEFINED_MODE, ECHO_MODE, PRINT_MODE };
 
 class lh_action_t{
   public:
     struct options_t{
-        bool echo_mode;
-        bool udp_mode;
+        lh_mode_t mode;
+        lh_protocol_t protocol;
 
         options_t();
     }options;
