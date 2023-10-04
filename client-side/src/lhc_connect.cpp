@@ -26,7 +26,7 @@ void lh_connect_echo_client(lh_action_t& act) {
     printf("start echo-client connected to %s, port %d\n", 
         inet_ntoa((in_addr){act.ip}), act.port);
 
-    int sock, str_len;
+    int sock;
     static char buf[BUF_SIZE];
     sockaddr_in serv_adr;
 
@@ -45,23 +45,29 @@ void lh_connect_echo_client(lh_action_t& act) {
     puts("Q/q to quit connection");
 
     write(sock, "e", 1); // notify connection type
+    read(sock, buf, 1); // get server answer
 
-    while (1) {
-        printf("#echo-client input> ");
-        fgets(buf, BUF_SIZE, stdin);
-
-        if (!strcmp(buf, "q\n") || !strcmp(buf, "Q\n"))
-            break;
-        
-        str_len = write(sock, buf, strlen(buf));
-
+    if (buf[0] == 'N') { // connection rejected
         char get_len;
         read(sock, &get_len, 1);
         lh_read_len(sock, buf, BUF_SIZE, get_len);
         printf("#message from server> %s", buf);
+    }
+    else { // buf[0] == 'Y'
+        while (1) {
+            printf("#echo-client input> ");
+            fgets(buf, BUF_SIZE, stdin);
 
-        if (str_len != get_len) // echo not supported
-            break;
+            if (!strcmp(buf, "q\n") || !strcmp(buf, "Q\n"))
+                break;
+            
+            write(sock, buf, strlen(buf));
+
+            char get_len;
+            read(sock, &get_len, 1);
+            lh_read_len(sock, buf, BUF_SIZE, get_len);
+            printf("#message from server> %s", buf);
+        }
     }
 
     close(sock);
@@ -72,7 +78,7 @@ void lh_connect_print_client(lh_action_t& act) {
         inet_ntoa((in_addr){act.ip}), act.port);
 
     int sock;
-    static char buf[BUF_SIZE];
+    static char buf[BUF_SIZE], str_len;
     sockaddr_in serv_adr;
 
     sock = socket(PF_INET, SOCK_STREAM, 0);
@@ -89,10 +95,13 @@ void lh_connect_print_client(lh_action_t& act) {
     puts("connected..........");
 
     write(sock, "p", 1); // notify connection type
+    read(sock, buf, 1); // get server answer
 
-    char str_len = strlen(act.options.print_content);
-    write(sock, &str_len, 1);
-    write(sock, act.options.print_content, str_len);
+    if (buf[0] == 'Y') { // write data while accepted
+        str_len = strlen(act.options.print_content);
+        write(sock, &str_len, 1);
+        write(sock, act.options.print_content, str_len);
+    }
 
     read(sock, &str_len, 1);
     lh_read_len(sock, buf, BUF_SIZE, str_len);
@@ -100,4 +109,51 @@ void lh_connect_print_client(lh_action_t& act) {
     printf("#message from server> %s", buf);
 
     close(sock);
+}
+
+void lh_connect_udp_echo_client(lh_action_t& act) {
+    printf("start udp-print-client connected to %s, port %d\n", 
+        inet_ntoa((in_addr){act.ip}), act.port);
+
+    int sock;
+    static char buf[BUF_SIZE];
+    sockaddr_in serv_adr, from_adr;
+    socklen_t adr_sz;
+
+    sock = socket(PF_INET, SOCK_DGRAM, 0);
+    if (sock == -1)
+        lh_err("socket() error");
+
+    memset(&serv_adr, 0, sizeof serv_adr);
+    serv_adr.sin_family = AF_INET;
+    serv_adr.sin_addr.s_addr = act.ip;
+    serv_adr.sin_port = htons(act.port);
+
+    sendto(sock, "e", 1, 0, (sockaddr*)&serv_adr, sizeof serv_adr);
+    recvfrom(sock, buf, 1, 0, (sockaddr*)&from_adr, &adr_sz);
+
+    if (buf[0] == 'N') {
+        char get_len;
+        recvfrom(sock, &get_len, 1, 0, (sockaddr*)&from_adr, &adr_sz);
+        recvfrom(sock, buf, get_len, 0, (sockaddr*)&from_adr, &adr_sz);
+        buf[get_len] = 0;
+        printf("#message from server> %s", buf);
+    }
+    else { // buf[0] == 'Y'
+        while (1) {
+            printf("#echo-client input> ");
+            fgets(buf, BUF_SIZE, stdin);
+
+            if (!strcmp(buf, "q\n") || !strcmp(buf, "Q\n"))
+                break;
+
+            sendto(sock, buf, strlen(buf), 0, (sockaddr*)&serv_adr, sizeof serv_adr);
+
+            char get_len;
+            recvfrom(sock, &get_len, 1, 0, (sockaddr*)&from_adr, &adr_sz);
+            recvfrom(sock, buf, get_len, 0, (sockaddr*)&from_adr, &adr_sz);
+            buf[get_len] = 0;
+            printf("#message from server> %s", buf);
+        }
+    }
 }

@@ -33,6 +33,19 @@ void lh_start_echo_service(int clnt_sock) {
     }
 }
 
+void lh_start_udp_echo_service(int serv_sock, sockaddr_in clnt_adr, socklen_t adr_sz) {
+    static char buf[BUF_SIZE];
+    static char str_len;
+
+    while ((str_len = recvfrom(serv_sock, buf, BUF_SIZE, 
+        0, (sockaddr*)&clnt_adr, &adr_sz))) {
+        
+        puts("\nUDP data package retransmitted");
+        sendto(serv_sock, &str_len, 1, 0, (sockaddr*)&clnt_adr, adr_sz);
+        sendto(serv_sock, buf, str_len, 0, (sockaddr*)&clnt_adr, adr_sz);
+    }
+}
+
 void lh_start_print_service(int clnt_sock) {
     static char buf[BUF_SIZE];
     static char str_len;
@@ -95,11 +108,13 @@ void lh_start_tcp_listener(lh_action_t& act) {
             static char reject[32];
             if (link_type == 'e') { // echo service
                 if (act.options.echo_service) {
+                    write(clnt_sock, "Y", 1);
                     puts("\necho service started");
                     std::thread thd(lh_start_echo_service, clnt_sock);
                     thd.join();
                 }
                 else {
+                    write(clnt_sock, "N", 1);
                     sprintf(reject, "echo service not supported\n");
                     char len = strlen(reject);
                     write(clnt_sock, &len, 1);
@@ -108,11 +123,13 @@ void lh_start_tcp_listener(lh_action_t& act) {
             }
             if (link_type == 'p') { // print service
                 if (act.options.print_service) {
+                    write(clnt_sock, "Y", 1);
                     puts("\nprint service started");
                     std::thread thd(lh_start_print_service, clnt_sock);
                     thd.join();
                 }
                 else {
+                    write(clnt_sock, "N", 1);
                     puts("rejected print");
                     sprintf(reject, "print service not supported\n");
                     char len = strlen(reject);
@@ -123,6 +140,62 @@ void lh_start_tcp_listener(lh_action_t& act) {
 
             std::this_thread::sleep_for(std::chrono::milliseconds(100)); // bugfix
             close(clnt_sock);
+        }
+
+        close(serv_sock);
+    }
+
+    return;
+}
+
+void lh_start_udp_listener(lh_action_t& act) {
+    bool& enable = std::ref(act.options.udp_listener); // listener enable flag
+    std::unique_lock<std::mutex> lck(lh_udp_mtx);
+
+    while (lh_end_start_flag == false) {
+        while (!enable && !lh_end_start_flag)
+            lh_cmdline_broadcast.wait(lck); // waiting for settings flashed
+
+
+        int serv_sock;
+
+        serv_sock = socket(PF_INET, SOCK_DGRAM, 0);
+        if (serv_sock == -1)
+            lh_err("socket() error");
+
+        sockaddr_in serv_adr, clnt_adr;
+        socklen_t adr_sz = sizeof clnt_adr;
+        
+        memset(&serv_adr, 0, sizeof serv_adr);
+        serv_adr.sin_family = AF_INET;
+        serv_adr.sin_addr.s_addr = htonl(INADDR_ANY);
+        serv_adr.sin_port = htons(act.port);
+
+        if (bind(serv_sock, (sockaddr*)&serv_adr, sizeof serv_adr) == -1)
+            lh_err("bind() error");
+
+        while (enable) { // accept until tcp disabled
+            char link_type;
+
+            recvfrom(serv_sock, &link_type, 1, 0, (sockaddr*)&clnt_adr, &adr_sz);
+
+            static char reject[32];
+            if (link_type == 'e') {
+                if (act.options.echo_service) {
+                    sendto(serv_sock, "Y", 1, 0, (sockaddr*)&clnt_adr, adr_sz);
+                    puts("\nUDP echo service started");
+                    std::thread thd(lh_start_udp_echo_service,
+                        serv_sock, clnt_adr, adr_sz);
+                    thd.join();
+                }
+                else {
+                    sendto(serv_sock, "N", 1, 0, (sockaddr*)&clnt_adr, adr_sz);
+                    sprintf(reject, "UDP echo service not supported\n");
+                    char len = strlen(reject);
+                    sendto(serv_sock, &len, 1, 0, (sockaddr*)&clnt_adr, adr_sz);
+                    sendto(serv_sock, reject, len, 0, (sockaddr*)&clnt_adr, adr_sz);
+                }
+            }
         }
 
         close(serv_sock);
@@ -170,6 +243,7 @@ void lh_start_cmdline(lh_action_t& act) {
 
     lh_action_t curact; // all false
     std::thread tcp_thd(lh_start_tcp_listener, std::ref(curact)); // start tcp listener thread
+    std::thread udp_thd(lh_start_udp_listener, std::ref(curact)); // start udp listener thread
 
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
     // wait for 20ms

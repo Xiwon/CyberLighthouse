@@ -5,5 +5,6 @@
 
 void lh_connect_echo_client(lh_action_t& act);
 void lh_connect_print_client(lh_action_t& act);
+void lh_connect_udp_echo_client(lh_action_t& act);
 
 #endif
