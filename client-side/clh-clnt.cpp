@@ -21,6 +21,8 @@ int main(int argc, const char* argv[]) {
         if (act.options.protocol == UDP_PROTOCOL) {
             if (act.options.mode == ECHO_MODE)
                 lh_connect_udp_echo_client(act); // udp echo client
+            if (act.options.mode == PRINT_MODE)
+                lh_connect_udp_print_client(act);
         }
     }
 }

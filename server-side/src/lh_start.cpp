@@ -31,19 +31,28 @@ void lh_start_echo_service(int clnt_sock) {
         write(clnt_sock, &str_len, 1);
         write(clnt_sock, buf, str_len);
     }
+
+    puts("echo service ended");
 }
 
 void lh_start_udp_echo_service(int serv_sock, sockaddr_in clnt_adr, socklen_t adr_sz) {
     static char buf[BUF_SIZE];
     static char str_len;
 
-    while ((str_len = recvfrom(serv_sock, buf, BUF_SIZE, 
-        0, (sockaddr*)&clnt_adr, &adr_sz))) {
-        
+    while (1) {
+        str_len = recvfrom(serv_sock, buf, BUF_SIZE, 
+            0, (sockaddr*)&clnt_adr, &adr_sz);
+        buf[str_len] = 0;
+
+        if (!strcmp(buf, "q\n") || !strcmp(buf, "Q\n"))
+            break;
+
         puts("\nUDP data package retransmitted");
         sendto(serv_sock, &str_len, 1, 0, (sockaddr*)&clnt_adr, adr_sz);
         sendto(serv_sock, buf, str_len, 0, (sockaddr*)&clnt_adr, adr_sz);
     }
+
+    puts("udp echo service ended");
 }
 
 void lh_start_print_service(int clnt_sock) {
@@ -59,6 +68,21 @@ void lh_start_print_service(int clnt_sock) {
     str_len = strlen(buf);
     write(clnt_sock, &str_len, 1);
     write(clnt_sock, buf, str_len);
+}
+
+void lh_start_udp_print_service(int serv_sock, sockaddr_in clnt_adr, socklen_t adr_sz) {
+    static char buf[BUF_SIZE];
+    static char str_len;
+
+    recvfrom(serv_sock, &str_len, 1, 0, (sockaddr*)&clnt_adr, &adr_sz);
+    recvfrom(serv_sock, buf, str_len, 0, (sockaddr*)&clnt_adr, &adr_sz);
+
+    printf("#message from client> %s\n", buf);
+
+    sprintf(buf, "ok, received %d bytes\n", (int)str_len);
+    str_len = strlen(buf);
+    sendto(serv_sock, &str_len, 1, 0, (sockaddr*)&clnt_adr, adr_sz);
+    sendto(serv_sock, buf, str_len, 0, (sockaddr*)&clnt_adr, adr_sz);
 }
 
 std::mutex lh_tcp_mtx, lh_udp_mtx;
@@ -130,7 +154,6 @@ void lh_start_tcp_listener(lh_action_t& act) {
                 }
                 else {
                     write(clnt_sock, "N", 1);
-                    puts("rejected print");
                     sprintf(reject, "print service not supported\n");
                     char len = strlen(reject);
                     write(clnt_sock, &len, 1);
@@ -191,6 +214,22 @@ void lh_start_udp_listener(lh_action_t& act) {
                 else {
                     sendto(serv_sock, "N", 1, 0, (sockaddr*)&clnt_adr, adr_sz);
                     sprintf(reject, "UDP echo service not supported\n");
+                    char len = strlen(reject);
+                    sendto(serv_sock, &len, 1, 0, (sockaddr*)&clnt_adr, adr_sz);
+                    sendto(serv_sock, reject, len, 0, (sockaddr*)&clnt_adr, adr_sz);
+                }
+            }
+            if (link_type == 'p') {
+                if (act.options.print_service) {
+                    sendto(serv_sock, "Y", 1, 0, (sockaddr*)&clnt_adr, adr_sz);
+                    puts("\nUDP print service started");
+                    std::thread thd(lh_start_udp_print_service,
+                        serv_sock, clnt_adr, adr_sz);
+                    thd.join();
+                }
+                else {
+                    sendto(serv_sock, "N", 1, 0, (sockaddr*)&clnt_adr, adr_sz);
+                    sprintf(reject, "UDP print service not supported\n");
                     char len = strlen(reject);
                     sendto(serv_sock, &len, 1, 0, (sockaddr*)&clnt_adr, adr_sz);
                     sendto(serv_sock, reject, len, 0, (sockaddr*)&clnt_adr, adr_sz);
@@ -271,6 +310,9 @@ void lh_start_cmdline(lh_action_t& act) {
 
         std::vector<char*> trans = lh_div_cmd(buf);
         lh_action_t newact(trans.size(), (const char**)trans.data(), curact);
+        for (int i = 0, sz = trans.size(); i < sz; i++)
+            delete[] trans[i];
+        trans.clear();
 
         // printf("cmd info: \n");
         // printf("argc = %d\n", (int)trans.size());

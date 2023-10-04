@@ -111,8 +111,49 @@ void lh_connect_print_client(lh_action_t& act) {
     close(sock);
 }
 
-void lh_connect_udp_echo_client(lh_action_t& act) {
+void lh_connect_udp_print_client(lh_action_t& act) {
     printf("start udp-print-client connected to %s, port %d\n", 
+        inet_ntoa((in_addr){act.ip}), act.port);
+
+    int sock;
+    static char buf[BUF_SIZE], str_len;
+    sockaddr_in serv_adr, from_adr;
+    socklen_t adr_sz;
+
+    sock = socket(PF_INET, SOCK_DGRAM, 0);
+    if (sock == -1)
+        lh_err("socket() error");
+
+    memset(&serv_adr, 0, sizeof serv_adr);
+    serv_adr.sin_family = AF_INET;
+    serv_adr.sin_addr.s_addr = act.ip;
+    serv_adr.sin_port = htons(act.port);
+
+    int tmp2 = connect(sock, (sockaddr*)&serv_adr, sizeof serv_adr);
+    sendto(sock, "p", 1, 0, (sockaddr*)&serv_adr, sizeof serv_adr);
+    int tmp = recvfrom(sock, buf, 1, 0, (sockaddr*)&from_adr, &adr_sz);
+    if (tmp == -1)
+        lh_err("udp connection rejected");
+
+    puts("connected..........");
+
+    if (buf[0] == 'Y') {
+        str_len = strlen(act.options.print_content);
+        sendto(sock, &str_len, 1, 0, (sockaddr*)&serv_adr, sizeof serv_adr);
+        sendto(sock, act.options.print_content, str_len, 0, 
+            (sockaddr*)&serv_adr, sizeof serv_adr);
+    }
+
+    recvfrom(sock, &str_len, 1, 0, (sockaddr*)&from_adr, &adr_sz);
+    recvfrom(sock, buf, str_len, 0, (sockaddr*)&from_adr, &adr_sz);
+
+    printf("#message from server> %s", buf);
+
+    close(sock);
+}
+
+void lh_connect_udp_echo_client(lh_action_t& act) {
+    printf("start udp-echo-client connected to %s, port %d\n", 
         inet_ntoa((in_addr){act.ip}), act.port);
 
     int sock;
@@ -129,8 +170,13 @@ void lh_connect_udp_echo_client(lh_action_t& act) {
     serv_adr.sin_addr.s_addr = act.ip;
     serv_adr.sin_port = htons(act.port);
 
+    int tmp2 = connect(sock, (sockaddr*)&serv_adr, sizeof serv_adr);
     sendto(sock, "e", 1, 0, (sockaddr*)&serv_adr, sizeof serv_adr);
-    recvfrom(sock, buf, 1, 0, (sockaddr*)&from_adr, &adr_sz);
+    int tmp = recvfrom(sock, buf, 1, 0, (sockaddr*)&from_adr, &adr_sz);
+    if (tmp == -1)
+        lh_err("udp connection rejected");
+
+    puts("connected..........");
 
     if (buf[0] == 'N') {
         char get_len;
@@ -144,10 +190,9 @@ void lh_connect_udp_echo_client(lh_action_t& act) {
             printf("#echo-client input> ");
             fgets(buf, BUF_SIZE, stdin);
 
-            if (!strcmp(buf, "q\n") || !strcmp(buf, "Q\n"))
-                break;
-
             sendto(sock, buf, strlen(buf), 0, (sockaddr*)&serv_adr, sizeof serv_adr);
+            if (!strcmp(buf, "q\n") || !strcmp(buf, "Q\n")) // necessary order
+                break;
 
             char get_len;
             recvfrom(sock, &get_len, 1, 0, (sockaddr*)&from_adr, &adr_sz);
@@ -156,4 +201,7 @@ void lh_connect_udp_echo_client(lh_action_t& act) {
             printf("#message from server> %s", buf);
         }
     }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // bugfix
+    close(sock);
 }
