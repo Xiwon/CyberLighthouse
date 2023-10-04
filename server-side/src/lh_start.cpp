@@ -113,6 +113,7 @@ void lh_start_tcp_listener(lh_action_t& act) {
                     thd.join();
                 }
                 else {
+                    puts("rejected print");
                     sprintf(reject, "print service not supported\n");
                     char len = strlen(reject);
                     write(clnt_sock, &len, 1);
@@ -120,6 +121,7 @@ void lh_start_tcp_listener(lh_action_t& act) {
                 }
             }
 
+            std::this_thread::sleep_for(std::chrono::milliseconds(100)); // bugfix
             close(clnt_sock);
         }
 
