@@ -8,6 +8,8 @@ lang: `c++, -std=c++14`
 
 compile: `g++ 12.2.0, cmake 3.25.1`
 
+开发记录在本目录下 `DevLog.md`
+
 ---
 
 ### 编译
