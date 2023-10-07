@@ -1,6 +1,0 @@
-/home/CyberLighthouse/client-side/build/CMakeFiles/clh-clnt.dir
-/home/CyberLighthouse/client-side/build/CMakeFiles/edit_cache.dir
-/home/CyberLighthouse/client-side/build/CMakeFiles/rebuild_cache.dir
-/home/CyberLighthouse/client-side/build/bin/CMakeFiles/client_required.dir
-/home/CyberLighthouse/client-side/build/bin/CMakeFiles/edit_cache.dir
-/home/CyberLighthouse/client-side/build/bin/CMakeFiles/rebuild_cache.dir
