@@ -13,6 +13,8 @@ using u32 = uint32_t;
 
 #define lh_sleep(ms) std::this_thread::sleep_for(std::chrono::milliseconds(ms))
 
+void lh_dns_server(int argc, const char* argv[]);
+
 void lh_error(const char* message, int line);
 void lh_warning(const char* message, int line);
 
@@ -468,16 +470,14 @@ void lh_makeqry(lh_qry& qry, lh_res& res) {
     // lh_print_hex(res.raw, res.rawlen);
 }
 
-void lh_dns_server() {
-
-}
-
 int main(int argc, const char* argv[]) {
-    if (argc >= 2 && !strcmp(argv[1], "start")) { // start server
+    if (argc >= 2 && 
+        (!strcmp(argv[1], "start") ||
+         !strcmp(argv[1], "flash"))) { // start server
         // server entrance
-        lh_dns_server();
+        lh_dns_server(argc, argv);
         return 0;
-    } 
+    }
 
     // puts("#>>> Query Construct Section <<<#");
     lh_qry qry(argc, argv);
@@ -515,3 +515,5 @@ void lh_print_hex(const u8* buf, int len) {
     }
     putchar('\n');
 }
+
+#include "dns-serv.cpp"
