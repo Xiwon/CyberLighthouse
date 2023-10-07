@@ -1,6 +1,0 @@
-/home/CyberLighthouse/server-side/build/CMakeFiles/clh.dir
-/home/CyberLighthouse/server-side/build/CMakeFiles/edit_cache.dir
-/home/CyberLighthouse/server-side/build/CMakeFiles/rebuild_cache.dir
-/home/CyberLighthouse/server-side/build/bin/CMakeFiles/server_required.dir
-/home/CyberLighthouse/server-side/build/bin/CMakeFiles/edit_cache.dir
-/home/CyberLighthouse/server-side/build/bin/CMakeFiles/rebuild_cache.dir
