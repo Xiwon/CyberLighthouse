@@ -46,6 +46,10 @@ const char* type_names[] = {
 const char* class_names[] = {
     "", "IN", "CS", "CH", "HS"
 };
+const char* rcode_info[] = {
+    "No Error", "Format Error", "Server Faliure", "No Such Name",
+    "Not Implemented", "Refused"
+};
 class lh_qry{
     friend class lh_res;
 
@@ -60,6 +64,9 @@ class lh_qry{
     int type;
 
   public:
+
+    lh_qry() = default;
+  
     lh_qry(int argc, const char* argv[]) {
         if (argc < 2)
             lh_err("domain name not found");
@@ -232,7 +239,7 @@ class lh_res{
         { // debug
             puts("===== [Response Info] =====");
             printf("> Transaction ID: 0x%04x\n", id);
-            printf("> Flags: 0x%04x\n", flags);
+            printf("> Flags: 0x%04x (%s)\n", flags, rcode_info[flags & 15]);
             printf("> Questions: %u\n", qdcount);
             printf("> Answer RRs: %u\n", ancount);
             printf("> Authority RRs: %u\n", nscount);
@@ -342,6 +349,10 @@ class lh_res{
             for (int i = 1; i <= len; i++)
                 putchar(read1char(from));
             putchar('\n');
+        }
+        else if (res.rtype == SOA) {
+            int from = res.datapos;
+            printf("> Primary Name Server: %s\n", readname(from).c_str());
         }
         else {
             printf("> <Cannot Display RDATA>\n");
@@ -457,16 +468,23 @@ void lh_makeqry(lh_qry& qry, lh_res& res) {
     // lh_print_hex(res.raw, res.rawlen);
 }
 
-int main(int argc, const char* argv[]) {
-    // puts("#>>> Query Construct Section <<<#");
+void lh_dns_server() {
 
+}
+
+int main(int argc, const char* argv[]) {
+    if (argc >= 2 && !strcmp(argv[1], "start")) { // start server
+        // server entrance
+        lh_dns_server();
+        return 0;
+    } 
+
+    // puts("#>>> Query Construct Section <<<#");
     lh_qry qry(argc, argv);
     qry.makeraw(); // construct bin packet
-
     // lh_print_hex(qry.raw.data(), qry.raw.size());
 
     // puts("#>>> Response Get Section <<<#");
-
     lh_res res;
     lh_makeqry(qry, res);
     res.readraw();
